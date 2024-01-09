@@ -20,10 +20,10 @@ public class Order implements Cloneable{
     //订单工期
     private int time;
 
-    public Order(int[] products, int time) {
+    public Order(int[] products, int endDay) {
         this.productsTotal = Arrays.copyOf(products, products.length);
         this.productsRemain =Arrays.copyOf(products, products.length);
-        this.time = time;
+        this.endDay = endDay;
     }
 
     public int getFees() {
@@ -52,6 +52,10 @@ public class Order implements Cloneable{
 
     public int getEndDay() {
         return endDay;
+    }
+
+    public void setTime(int time) {
+        this.time = time;
     }
 
     public int getTime() {

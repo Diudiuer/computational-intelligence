@@ -7,10 +7,12 @@ import java.util.Random;
 
 public class SimulatedAnnealing {
 
-    private static final int MAX_ITER = 10000;
+    private static final int MAX_ITER = 1;
     private static final double INITIAL_TEMP = 100.0;
     private static final double FINAL_TEMP = 1e-3;
     private static final double ALPHA = 0.95;
+
+    private int numP;
 
     private Factory factory;
 
@@ -48,6 +50,8 @@ public class SimulatedAnnealing {
             }
         }
         int day = (numPeriod[0] + numPeriod[1] + numPeriod[2]) / 6 + 1;
+        this.numP=day;
+        //System.out.println(numP);
         return splitIntoEighteen(generateRandomString(numPeriod[0], numPeriod[1], numPeriod[2], day * 6 - numPeriod[0] - numPeriod[1] - numPeriod[2]));
     }
 
@@ -107,35 +111,25 @@ public class SimulatedAnnealing {
     }
 
     private String repairSolution(String solution) {
-        StringBuilder sb = new StringBuilder(solution);
-        int numCycles = sb.length() / 3;
+        StringBuilder nonZeroBuilder = new StringBuilder();
+        StringBuilder zeroBuilder = new StringBuilder();
 
-        // 用于记录每个周期是否为"000"
-        boolean[] isZeroCycle = new boolean[numCycles];
-
-        for (int i = 0; i < numCycles; i++) {
-            if (sb.substring(i * 3, i * 3 + 3).equals("000")) {
-                isZeroCycle[i] = true;
+        // 遍历字符串中的每个字符
+        for (int i = 0; i < solution.length(); i++) {
+            char ch = solution.charAt(i);
+            if (ch == '0') {
+                zeroBuilder.append(ch);  // 如果字符是0，则添加到zeroBuilder
             } else {
-                isZeroCycle[i] = false;
+                nonZeroBuilder.append(ch); // 如果字符非0，则添加到nonZeroBuilder
             }
         }
 
-        // 将所有非"000"周期移动到前面
-        int nonZeroIndex = 0;
-        for (int i = 0; i < numCycles; i++) {
-            if (!isZeroCycle[i]) {
-                sb.replace(nonZeroIndex * 3, nonZeroIndex * 3 + 3, sb.substring(i * 3, i * 3 + 3));
-                nonZeroIndex++;
-            }
-        }
+        // 将非零值和零值的StringBuilder合并
+        nonZeroBuilder.append(zeroBuilder);
 
-        // 填充剩余的周期为"000"
-        for (int i = nonZeroIndex; i < numCycles; i++) {
-            sb.replace(i * 3, i * 3 + 3, "000");
-        }
-        return sb.toString();
+        return nonZeroBuilder.toString();
     }
+
 
     public double calculateEnergy(String[] solution) {
         double profit = 0;
@@ -182,12 +176,8 @@ public class SimulatedAnnealing {
     public double removeOrder(Order o, Iterator<Order> it) {
         it.remove();  // 使用迭代器的remove方法
         if (day + 1 <= o.getEndDay()) {
-            System.out.println("day"+day);
-            System.out.println("endday:" + o.getEndDay());
-            System.out.println("fees:" + o.getFees());
             return o.getFees();
         } else {
-            System.out.println(day);
             return o.getFees() * 0.9;
         }
     }
@@ -220,19 +210,144 @@ public class SimulatedAnnealing {
         return newSolution;
     }
 
-    private static double acceptanceProbability(double energy, double newEnergy, double temperature) {
-        if (newEnergy < energy) {
+    public String[] generateNeighbor1(String[] solution, double temperature) {
+        Random random = new Random();
+        // 根据温度计算交换次数
+        int swapTimes = calculateSwapTimes(temperature);
+
+        String[] newSolution = Arrays.copyOf(solution, solution.length);
+
+        for (int swap = 0; swap < swapTimes; swap++) {
+            int day1 = random.nextInt(newSolution.length);
+            int day2 = random.nextInt(newSolution.length);
+            while (day2 == day1) {
+                day2 = random.nextInt(newSolution.length); // 确保day1和day2不同
+            }
+
+            // 确保day1在day2之前
+            if (day1 > day2) {
+                int temp = day1;
+                day1 = day2;
+                day2 = temp;
+            }
+
+            char[] charsDay1 = newSolution[day1].toCharArray();
+            char[] charsDay2 = newSolution[day2].toCharArray();
+
+            // 在day1中查找第一个0，和day2中的第一个非0进行交换
+            for (int i = 0; i < charsDay1.length; i++) {
+                if (charsDay1[i] == '0') {
+                    for (int j = 0; j < charsDay2.length; j++) {
+                        if (charsDay2[j] != '0') {
+                            // 交换值
+                            charsDay1[i] = charsDay2[j];
+                            charsDay2[j] = '0';
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // 将修改后的字符数组转换回字符串
+            newSolution[day1] = new String(charsDay1);
+            newSolution[day2] = new String(charsDay2);
+        }
+
+        return newSolution;
+    }
+
+    private int calculateSwapTimes(double temperature) {
+        // 示例：根据温度线性计算交换次数
+        // 可根据需要调整这个公式
+        return (int) Math.max(1, (numP*temperature/100)); // 确保至少有一次交换
+    }
+
+    public String[] generateNeighbor2(String[] solution, double temperature) {
+        Random random = new Random();
+        // 根据温度计算交换次数
+        int swapTimes = calculateSwapTimes(temperature);
+
+        String[] newSolution = Arrays.copyOf(solution, solution.length);
+
+        for (int swap = 0; swap < swapTimes; swap++) {
+            int day1 = random.nextInt(newSolution.length);
+            int day2 = random.nextInt(newSolution.length);
+            while (day2 == day1) {
+                day2 = random.nextInt(newSolution.length); // 确保day1和day2不同
+            }
+
+            char[] charsDay1 = newSolution[day1].toCharArray();
+            char[] charsDay2 = newSolution[day2].toCharArray();
+
+            // 在两个天中交换非零元素
+            swapNonZeroElements(charsDay1, charsDay2);
+
+            // 将修改后的字符数组转换回字符串
+            newSolution[day1] = new String(charsDay1);
+            newSolution[day2] = new String(charsDay2);
+        }
+
+        return newSolution;
+    }
+
+    private void swapNonZeroElements(char[] day1, char[] day2) {
+        Random random = new Random();
+        for (int i = 0; i < day1.length; i++) {
+            if (day1[i] != '0' && day2[i] != '0') {
+                // 交换非零元素
+                char temp = day1[i];
+                day1[i] = day2[i];
+                day2[i] = temp;
+            }
+        }
+    }
+
+
+
+    private double acceptanceProbability(double energy, double newEnergy, double temperature) {
+        if (newEnergy >energy) {
             return 1.0;
         }
-        return Math.exp(-(energy - newEnergy) / temperature);
+        double x=energy - newEnergy;
+        int k=1;
+        //System.out.println(energy - newEnergy);
+        if (x<=50000&&x>20000){
+            k=10000000;
+        }else if (x<=20000&&x>10000){
+            k=5000000;
+        }
+        else if (x<=10000&&x>5000){
+            k=2000000;
+        }
+        else if (x<=5000&&x>2000){
+            k=1000000;
+        }
+        else if (x<=2000&&x>1000){
+            k=500000;
+        }
+        else if (x<=1000&&x>500){
+            k=200000;
+        }
+        else if (x<=500&&x>100){
+            k=80000;
+        }
+
+        else if (x<=100){
+            k=20000;
+        }
+        return Math.exp(-(energy - newEnergy) / k*temperature);
     }
 
     public String[] generateBestSolution() {
         String[] currentSolution = generateInitialSolution();
+        //currentSolution= new String[]{"330020000000000000", "231300000000000000", "123310000000000000"};
         currentSolution = optimizationSolution(currentSolution);
         String[] bestSolution = currentSolution;
         double currentEnergy = calculateEnergy(currentSolution);
         double bestEnergy = currentEnergy;
+//        System.out.println("initsolution:"+ Arrays.toString(currentSolution));
+//        System.out.println("initE:"+bestEnergy);
 
         double temp = INITIAL_TEMP;
 
@@ -240,12 +355,14 @@ public class SimulatedAnnealing {
 
         while (temp > FINAL_TEMP) {
             for (int i = 0; i < MAX_ITER; i++) {
-                String[] newSolution = generateNeighbor(currentSolution);
+                String[] newSolution1 = generateNeighbor1(currentSolution,temp);
+                newSolution1 = optimizationSolution(newSolution1);
+                String[] newSolution = generateNeighbor2(newSolution1,temp);
                 newSolution = optimizationSolution(newSolution);
                 double newEnergy = calculateEnergy(newSolution);
-                System.out.println("newSolution:" + Arrays.toString(newSolution));
-                System.out.println("newE:" + newEnergy);
-
+//                System.out.println("Solution:" + Arrays.toString(newSolution));
+//                System.out.println("Energy:" + newEnergy);
+//                System.out.println(acceptanceProbability(currentEnergy, newEnergy, temp));
                 if (acceptanceProbability(currentEnergy, newEnergy, temp) > random.nextDouble()) {
                     currentSolution = newSolution;
                     currentEnergy = newEnergy;
@@ -257,8 +374,8 @@ public class SimulatedAnnealing {
             }
 
             temp *= ALPHA;
-            System.out.println("bestSolution:" + Arrays.toString(bestSolution));
-            System.out.println("bestEnergy:" + bestEnergy);
+//            System.out.println("bestSolution:" + Arrays.toString(bestSolution));
+//            System.out.println("bestEnergy:" + bestEnergy);
         }
         return bestSolution;
     }
@@ -268,9 +385,26 @@ public class SimulatedAnnealing {
         Factory factory1 = new Factory();
         Order o = new Order(new int[]{20, 10, 34}, 1);
         factory1.addOrder(new Order(new int[]{20, 10, 34}, 1));
-        System.out.println(factory1.calculateFees(o));
+        factory1.addOrder(new Order(new int[]{21, 60, 50}, 2));
+        factory1.addOrder(new Order(new int[]{70, 20, 80}, 3));
+        factory1.addOrder(new Order(new int[]{100, 10, 10}, 5));
+        factory1.addOrder(new Order(new int[]{200, 170, 200}, 8));
+        factory1.addOrder(new Order(new int[]{30, 40, 3}, 2));
+        factory1.addOrder(new Order(new int[]{40, 200, 3}, 6));
+        factory1.addOrder(new Order(new int[]{50, 100, 80}, 9));
+        factory1.addOrder(new Order(new int[]{20, 20, 10}, 12));
+        factory1.addOrder(new Order(new int[]{20, 10, 34}, 11));
+        factory1.addOrder(new Order(new int[]{30, 60, 50}, 6));
+        factory1.addOrder(new Order(new int[]{70, 20, 80}, 11));
+        factory1.addOrder(new Order(new int[]{100, 10, 10}, 12));
+        factory1.addOrder(new Order(new int[]{200, 170, 200}, 11));
+        factory1.addOrder(new Order(new int[]{30, 40, 3}, 10));
+        factory1.addOrder(new Order(new int[]{40, 200, 3}, 15));
+        factory1.addOrder(new Order(new int[]{50, 100, 80}, 14));
+        factory1.addOrder(new Order(new int[]{20, 20, 10}, 12));
+        factory1.sortOrdersByGreedy();
         //{56,19,58};   20,10,34  950   cost=
-        //{8,4,6};      222111333333   cost=2280   salary=480  600
+        //{8,4,6};      222111333333   cost=2280   salary= 480 600  9500-2280
         // 16,8,48
 
         SimulatedAnnealing s = new SimulatedAnnealing(factory1);
@@ -281,7 +415,9 @@ public class SimulatedAnnealing {
 //        orders.add(new Order(new int[]{23, 8, 21}, 15));
         //s.generateNeighbor(s.generateInitialSolution());
         s.generateBestSolution();
-        System.out.println(s.calculateEnergy(new String[]{"332233000000000000", "001030000000000000", "011302000000000000"}));
-        System.out.println(s.calculateEnergy(new String[]{"332233000000000000", "001030000000000000", "011302000000000000"}));
+        //s.generateInitialSolution();
+        //System.out.println(s.acceptanceProbability(100,0,100));
+
+        //System.out.println(Arrays.toString(s.generateNeighbor2(new String[]{"113000000000000000", "323100000000000000", "323320000000000000"},100)));
     }
 }
