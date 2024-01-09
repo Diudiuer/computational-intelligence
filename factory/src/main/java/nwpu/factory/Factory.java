@@ -1,36 +1,26 @@
 package nwpu.factory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.*;
 
 public class Factory {
     //单个产品的生产成本
-    private final int costA = 20;
-    private final int costB = 30;
-    private final int costC = 40;
+    private final int[] cost={20,30,40};
 
     //单个产品的收益
-    private final int profitA = 20;
-    private final int profitB = 40;
-    private final int profitC = 30;
+    private final int[] profit={20,40,30};
 
     //工人单个生产周期的薪资以及加班费
-    private final int[] salary = {100, 120, 140, 160, 180};
+    private final int[] salary = {80, 100, 120, 140, 160};
 
     //单个产品的定价
-    private final int priceA = costA + profitA + salary[0];
-    private final int priceB = costB + profitB + salary[0];
-    private final int priceC = costC + profitC + salary[0];
+    private final int[] price={cost[0] + profit[0]+salary[0] ,cost[1] + profit[1]+salary[0] ,cost[2] + profit[2]+salary[0] };
 
     //三种产品的单个生产周期的生产个数
-    private final int numA = 8;
-    private final int numB = 4;
-    private final int numC = 6;
+    private final int[] num={8,4,6};
 
 
     //当前工厂的总收益
-    private double profit = 0;
+    private double profitTotal= 0;
     //当前工业开业的天数
     private int day = 0;
     //工厂当前仍未完成的订单
@@ -38,6 +28,38 @@ public class Factory {
 
     public Factory() {
         this.orders = new ArrayList<>();
+    }
+
+    public ArrayList<Order> getOrders() {
+        return orders;
+    }
+
+    public int[] getCost() {
+        return cost;
+    }
+
+    public int[] getProfit() {
+        return profit;
+    }
+
+    public int[] getSalary() {
+        return salary;
+    }
+
+    public int[] getPrice() {
+        return price;
+    }
+
+    public int[] getNum() {
+        return num;
+    }
+
+    public double getProfitTotal() {
+        return profitTotal;
+    }
+
+    public int getDay() {
+        return day;
     }
 
     public void addOrder(Order o) {
@@ -50,17 +72,18 @@ public class Factory {
     public int calculateFees(Order o) {
         int fees = 0;
         int[] nums = o.getProductsTotal();
-        fees += priceA * nums[0];
-        fees += priceB * nums[1];
-        fees += priceC * nums[2];
+        fees += price[0] * nums[0];
+        fees += price[1] * nums[1];
+        fees += price[2] * nums[2];
+        fees+=o.getTime()*500;
         return fees;
     }
 
     public void removeOrder(Order o, Iterator<Order> it) {
         if (day <= o.getEndDay()) {
-            profit += o.getFees();
+            profitTotal += o.getFees();
         } else {
-            profit += o.getFees() * 0.9;
+            profitTotal += o.getFees() * 0.9;
         }
         it.remove();  // 使用迭代器的remove方法
     }
@@ -77,21 +100,31 @@ public class Factory {
         day++;
         int[] productsNum = calculateArrangement(arrangement);
         System.out.println("昨天共生产的产品数目：" + Arrays.toString(productsNum));
-        profit -= productsNum[0] * costA + productsNum[1] * costB + productsNum[2] * costC;
-        profit -= calculateSalary(arrangement);
+        profitTotal -= productsNum[0] * cost[0] + productsNum[1] * cost[1] + productsNum[2] * cost[2];
+        profitTotal -= calculateSalary(arrangement);
         arrangeProductToOrder(productsNum);
         display();
+    }
 
-
+    public void addDay1(String arrangement){
+        day++;
+        int[] productsNum = calculateArrangement(arrangement);
+        profitTotal -= productsNum[0] * cost[0] + productsNum[1] * cost[1] + productsNum[2] * cost[2];
+        profitTotal -= calculateSalary(arrangement);
+        arrangeProductToOrder(productsNum);
     }
 
     //计算今天安排的工作共加工的产品数目
     public int[] calculateArrangement(String arrangement) {
         int[] productsNum = {0, 0, 0};
-        for (int i = 0; i < 18; i += 3) {
-            productsNum[0] += (arrangement.charAt(i)-'0')*numA;
-            productsNum[1] += (arrangement.charAt(i + 1)-'0')*numB;
-            productsNum[2] += (arrangement.charAt(i + 2)-'0')*numC;
+        for (int i = 0; i < 18; i ++) {
+            if (arrangement.charAt(i)-'0'==1){
+                productsNum[0] += num[0];
+            }else if (arrangement.charAt(i)-'0'==2){
+                productsNum[1] += num[1];
+            }else if (arrangement.charAt(i)-'0'==3){
+                productsNum[2] += num[2];
+            }
         }
         return productsNum;
     }
@@ -113,18 +146,42 @@ public class Factory {
                 removeOrder(o, it);  // 修改了此处
             }
         }
-
     }
 
     //计算今天安排的工资费
     public int calculateSalary(String arrangement) {
         int salaryTotal = 0;
-        salaryTotal += salary[0] * 2;
-        for (int i = 2; i < 6; i += 1) {
-            if (arrangement.charAt(i)-'0' + arrangement.charAt(i + 1) -'0'+ arrangement.charAt(i + 2)-'0' == 3) {
-                salaryTotal += salary[i - 1];
+        for (int i = 0; i < 18; i ++) {
+            if (arrangement.charAt(i)-'0' !=0){
+                if (i<6){
+                    salaryTotal+=salary[0];
+                }else{
+                    salaryTotal+=salary[i/3-1];
+                }
             }
         }
         return salaryTotal;
     }
+
+    public static void sortOrders(ArrayList<Order> orders) {
+        Collections.sort(orders, new Comparator<Order>() {
+            @Override
+            public int compare(Order o1, Order o2) {
+                // 首先按截止时间排序
+                int timeCompare = Integer.compare(o1.getEndDay(), o2.getEndDay());
+                if (timeCompare != 0) {
+                    return timeCompare;
+                }
+
+                // 如果截止时间相同，则按订单金额排序
+                return Integer.compare(o1.getFees(), o2.getFees());
+            }
+        });
+    }
+
+    public static void main(String[] args) {
+        Factory factory=new Factory();
+        System.out.println(factory.calculateSalary("112333000000000000"));
+    }
+
 }

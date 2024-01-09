@@ -18,7 +18,7 @@ public class Main {
                     factory.display();
                     break;
                 case 3:
-                    factory.addDay(new SimulatedAnnealing().generateBestSolution());
+                    //factory.addDay(new SimulatedAnnealing(factory).generateBestSolution());
                     break;
                 default:
                     System.out.println("无效的输入，请输入1-3之间的数字。");

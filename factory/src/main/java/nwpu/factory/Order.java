@@ -2,7 +2,7 @@ package nwpu.factory;
 
 import java.util.Arrays;
 
-public class Order {
+public class Order implements Cloneable{
     //目前订单的需要的所有产品数目
     private int[] productsTotal;
 
@@ -56,6 +56,18 @@ public class Order {
 
     public int getTime() {
         return time;
+    }
+    @Override
+    public Order clone() {
+        try {
+            Order clonedOrder = (Order) super.clone();
+            // 对数组进行深拷贝
+            clonedOrder.productsTotal = Arrays.copyOf(this.productsTotal, this.productsTotal.length);
+            clonedOrder.productsRemain = Arrays.copyOf(this.productsRemain, this.productsRemain.length);
+            return clonedOrder;
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
